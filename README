@@ -3,7 +3,7 @@
   2013/11/04 - 
   As of Commit 302673ed04107155b448c3d6cf55b7bff752474b We have Auth login
   we can see the realm, World server from that build doesnt start up because
-  of possible DBC structures thats outdated
+  of Mssing DBC's.
   
 
 
