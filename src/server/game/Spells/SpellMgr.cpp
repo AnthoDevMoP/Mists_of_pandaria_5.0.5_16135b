@@ -473,28 +473,6 @@ uint32 SpellMgr::GetSpellIdForDifficulty(uint32 spellId, Unit const* caster) con
     uint32 difficultyId = GetSpellDifficultyId(spellId);
     if (!difficultyId)
         return spellId; //return source spell, it has only REGULAR_DIFFICULTY
-
-    SpellDifficultyEntry const* difficultyEntry = sSpellDifficultyStore.LookupEntry(difficultyId);
-    if (!difficultyEntry)
-    {
-        TC_LOG_DEBUG(LOG_FILTER_SPELLS_AURAS, "SpellMgr::GetSpellIdForDifficulty: SpellDifficultyEntry not found for spell %u. This should never happen.", spellId);
-        return spellId; //return source spell
-    }
-
-    if (difficultyEntry->SpellID[mode] <= 0 && mode > DUNGEON_DIFFICULTY_HEROIC)
-    {
-        TC_LOG_DEBUG(LOG_FILTER_SPELLS_AURAS, "SpellMgr::GetSpellIdForDifficulty: spell %u mode %u spell is NULL, using mode %u", spellId, mode, mode - 2);
-        mode -= 2;
-    }
-
-    if (difficultyEntry->SpellID[mode] <= 0)
-    {
-        TC_LOG_ERROR(LOG_FILTER_SQL, "SpellMgr::GetSpellIdForDifficulty: spell %u mode %u spell is 0. Check spelldifficulty_dbc!", spellId, mode);
-        return spellId;
-    }
-
-    TC_LOG_DEBUG(LOG_FILTER_SPELLS_AURAS, "SpellMgr::GetSpellIdForDifficulty: spellid for spell %u in mode %u is %d", spellId, mode, difficultyEntry->SpellID[mode]);
-    return uint32(difficultyEntry->SpellID[mode]);
 }
 
 SpellInfo const* SpellMgr::GetSpellForDifficultyFromSpell(SpellInfo const* spell, Unit const* caster) const
@@ -1491,66 +1469,6 @@ void SpellMgr::LoadSpellLearnSpells()
     }
 
     uint32 mastery_count = 0;
-    for (uint32 i = 0; i < sTalentTabStore.GetNumRows(); ++i)
-    {
-        TalentTabEntry const* talentTab = sTalentTabStore.LookupEntry(i);
-        if (!talentTab)
-            continue;
-
-        for (uint32 c = CLASS_WARRIOR; c < MAX_CLASSES; ++c)
-        {
-            if (!(talentTab->ClassMask & (1 << (c - 1))))
-                continue;
-
-            uint32 masteryMainSpell = MasterySpells[c];
-
-            for (uint32 m = 0; m < MAX_MASTERY_SPELLS; ++m)
-            {
-                uint32 mastery = talentTab->MasterySpellId[m];
-                if (!mastery)
-                    continue;
-
-                SpellLearnSpellMapBounds db_node_bounds = dbSpellLearnSpells.equal_range(masteryMainSpell);
-                bool found = false;
-                for (SpellLearnSpellMap::const_iterator itr = db_node_bounds.first; itr != db_node_bounds.second; ++itr)
-                {
-                    if (itr->second.spell == mastery)
-                    {
-                        TC_LOG_ERROR(LOG_FILTER_SQL, "Found redundant record (entry: %u, SpellID: %u) in `spell_learn_spell`, spell added automatically as mastery learned spell from TalentTab.dbc", masteryMainSpell, mastery);
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found)
-                    continue;
-
-                // Check if it is already found in Spell.dbc, ignore silently if yes
-                SpellLearnSpellMapBounds dbc_node_bounds = GetSpellLearnSpellMapBounds(masteryMainSpell);
-                found = false;
-                for (SpellLearnSpellMap::const_iterator itr = dbc_node_bounds.first; itr != dbc_node_bounds.second; ++itr)
-                {
-                    if (itr->second.spell == mastery)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found)
-                    continue;
-
-                SpellLearnSpellNode masteryNode;
-                masteryNode.spell       = mastery;
-                masteryNode.active      = true;
-                masteryNode.autoLearned = false;
-
-                mSpellLearnSpells.insert(SpellLearnSpellMap::value_type(masteryMainSpell, masteryNode));
-                ++mastery_count;
-            }
-        }
-    }
-
     TC_LOG_INFO(LOG_FILTER_SERVER_LOADING, ">> Loaded %u spell learn spells, %u found in Spell.dbc and %u from TalentTab.dbc in %u ms", count, dbc_count, mastery_count, GetMSTimeDiffToNow(oldMSTime));
 }
 
@@ -2696,8 +2614,6 @@ void SpellMgr::LoadSpellInfoStore()
         SpellEffectEntry const* effect = sSpellEffectStore.LookupEntry(i);
         if (!effect)
             continue;
-
-        effectsBySpell[effect->EffectSpellId].effects[effect->EffectIndex] = effect;
     }
 
     for (uint32 i = 0; i < sSpellStore.GetNumRows(); ++i)
