@@ -1,5 +1,10 @@
 = Current Core Status = 
   
+  2013/11/22 -
+  Ok sorry for the delay in Devolopment had Business to take care of, but now me are back :P lol. 
+  now ty to projectcore for all patches he made and the DBC's i had to disable db2 loading.
+  Right now we can/ or i can connect to World server then server just hangs up will commit again on sunday
+  
   2013/11/04 - 
   As of Commit 302673ed04107155b448c3d6cf55b7bff752474b We have Auth login
   we can see the realm, World server from that build doesnt start up because
